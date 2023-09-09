@@ -92,13 +92,9 @@ const pokemonTypes = [
 ];
 
 const pokemonList = document.getElementById("pokemon-list");
-function showPokemon(pokemon) {
-  let pokeId = pokemon.id.toString();
-  if (pokeId.length === 1) {
-    pokeId = "00" + pokeId;
-  } else if (pokeId.length === 2) {
-    pokeId = "0" + pokeId;
-  }
+
+function createPokemonElement(pokemon) {
+  const pokeId = pokemon.id.toString().padStart(3, "0");
 
   const pokemonItem = document.createElement("div");
   pokemonItem.classList.add("pokemon-item");
@@ -117,14 +113,10 @@ function showPokemon(pokemon) {
       <div class="pokemon-types">
         ${pokemon.types
           .map((type) => {
-            const colorBtn = pokemonTypes.find(
+            const mainType = pokemonTypes.find(
               (pokemonType) => pokemonType.name === type.type.name
-            ).color;
-            const textColorBtn = pokemonTypes.find(
-              (pokemonType) => pokemonType.name === type.type.name
-            ).textColor;
-
-            return `<p class="${type.type.name} pokemon-type chip" style="background-color: ${colorBtn}; color: ${textColorBtn}">${type.type.name}</p>`;
+            );
+            return `<p class="pokemon-type chip" style="background-color: ${mainType.color}; color: ${mainType.textColor}">${type.type.name}</p>`;
           })
           .join("")}
       </div>
@@ -135,54 +127,61 @@ function showPokemon(pokemon) {
     </div>
   `;
 
-  pokemonList.append(pokemonItem);
+  pokemonList.appendChild(pokemonItem);
 }
 
 const navList = document.getElementById("nav-list");
-const buildShowPokemonType = (pokemonDataArray) => (pokemonType) => {
-  const navItem = document.createElement("li");
-  navItem.classList.add("nav-item");
 
-  const colorBtn = pokemonTypes.find(
-    (type) => pokemonType.name === type.name
-  ).color;
+function createTypeButton(pokemonType) {
+  const button = document.createElement("button");
+  button.id = pokemonType.name;
+  button.classList.add("chip", "nav-item-btn");
+  button.style = `background-color: ${pokemonType.color}; color: ${pokemonType.textColor}`;
+  button.textContent = pokemonType.name;
+  return button;
+}
 
-  const textColorBtn = pokemonTypes.find(
-    (type) => pokemonType.name === type.name
-  ).textColor;
+function buildShowPokemonType(pokemonDataArray) {
+  return (pokemonType) => {
+    const navItem = document.createElement("li");
+    navItem.classList.add("nav-item");
 
-  navItem.innerHTML = `
-    <button id="${pokemonType.name}" class="chip nav-item-btn" style="background-color: ${colorBtn}; color: ${textColorBtn}">${pokemonType.name}</button>
-  `;
+    const button = createTypeButton(pokemonType);
+    navItem.appendChild(button);
 
-  navItem.addEventListener("click", () => {
-    pokemonList.innerHTML = "";
+    navItem.addEventListener("click", () => {
+      pokemonList.innerHTML = "";
 
-    const pokemonDataArrayFilter =
-      pokemonType.name === "all"
-        ? pokemonDataArray
-        : pokemonDataArray.filter((data) =>
-            data.types.some((type) => type.type.name.includes(pokemonType.name))
-          );
+      const pokemonDataArrayFilter =
+        pokemonType.name === "all"
+          ? pokemonDataArray
+          : pokemonDataArray.filter((data) =>
+              data.types.some((type) =>
+                type.type.name.includes(pokemonType.name)
+              )
+            );
 
-    pokemonDataArrayFilter.forEach((data) => showPokemon(data));
-  });
+      pokemonDataArrayFilter.forEach((data) => createPokemonElement(data));
+    });
 
-  navList.append(navItem);
-};
+    navList.appendChild(navItem);
+  };
+}
 
 const requests = [];
 for (let i = 1; i <= 196; i++) {
   requests.push(
-    fetch(`https://pokeapi.co/api/v2/pokemon/${i}`).then((response) =>
-      response.json()
-    )
+    fetch(`https://pokeapi.co/api/v2/pokemon/${i}`)
+      .then((response) => response.json())
+      .catch((error) => {
+        console.error(`Error al obtener los datos del Pokémon #${i}:`, error);
+      })
   );
 }
 
 Promise.all(requests)
   .then((pokemonDataArray) => {
-    pokemonDataArray.forEach((data) => showPokemon(data));
+    pokemonDataArray.forEach((data) => createPokemonElement(data));
     const showPokemonType = buildShowPokemonType(pokemonDataArray);
     pokemonTypes.forEach((pokemonType) => showPokemonType(pokemonType));
   })
